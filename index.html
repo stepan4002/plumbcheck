@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PlumbCheck: test what your AI agent does</title>
+<meta name="description" content="Local regression tests for AI agents' tool calls. Catch a wrong argument, an unapproved send or a forbidden operation before your agent touches real systems.">
+<meta property="og:title" content="PlumbCheck: test the work, trust the agent">
+<meta property="og:description" content="Local, open-source regression tests for the tool calls your AI agent makes.">
+<meta property="og:image" content="https://stepan4002.github.io/plumbcheck/social-preview.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+  :root { --ink: #07081c; --cream: #f4f1e9; --pink: #ff3ea5; --lime: #c8ff00; --blue: #3024ff; --muted: #9a9db8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ink); color: var(--cream); font: 17px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 960px; margin: 0 auto; padding: 56px 16px 72px; }
+  h1 { font: 900 clamp(44px, 9vw, 88px)/1 system-ui, sans-serif; letter-spacing: -0.04em; margin: 0; }
+  h1 b { color: var(--pink); font-weight: 900; }
+  .tag { font-size: clamp(22px, 4vw, 30px); font-weight: 800; margin: 14px 0 8px; }
+  .lede { color: var(--muted); max-width: 640px; }
+  .demo { margin: 32px 0; border: 2px solid rgba(244, 241, 233, 0.2); width: 100%; height: auto; display: block; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0; }
+  a.btn { display: inline-block; padding: 12px 20px; font-weight: 700; text-decoration: none; border: 2px solid var(--cream); color: var(--cream); }
+  a.btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+  a.btn.lime { background: var(--lime); border-color: var(--lime); color: #0a0a0a; }
+  a.btn:focus-visible { outline: 3px solid var(--pink); outline-offset: 3px; }
+  pre { background: #000; color: var(--lime); padding: 16px; overflow-x: auto; font: 15px/1.5 ui-monospace, Consolas, monospace; }
+  h2 { font-size: 24px; margin: 40px 0 8px; }
+  ul { padding-left: 20px; } li { margin: 6px 0; }
+  code { font-family: ui-monospace, Consolas, monospace; color: var(--lime); }
+  footer { color: var(--muted); font-size: 14px; margin-top: 48px; }
+  footer a { color: var(--cream); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Plumb<b>[</b>check<b>]</b></h1>
+  <p class="tag">Test the work. Trust the agent.</p>
+  <p class="lede">Local regression tests for what your AI agent <em>does</em>: catch a wrong tool argument, an unapproved send, a forbidden operation or a wrong final answer before the agent touches real systems.</p>
+
+  <img class="demo" src="demo.gif" width="880" height="495" alt="A tool reply hides an instruction to delete the order; the agent calls orders.delete; PlumbCheck blocks it and the live probe reports 6 of 6 caught">
+
+  <div class="row">
+    <a class="btn lime" href="report.html">Open a sample report</a>
+    <a class="btn primary" href="https://github.com/stepan4002/plumbcheck/releases">Download for Windows</a>
+    <a class="btn" href="https://github.com/stepan4002/plumbcheck">View on GitHub</a>
+  </div>
+
+  <h2>Try it from source</h2>
+  <pre>git clone https://github.com/stepan4002/plumbcheck && cd plumbcheck && npm ci && npm run demo</pre>
+  <p class="lede">Needs Node.js 22+. <code>npm run demo</code> fails on purpose and writes the same kind of report you can open above.</p>
+
+  <h2>What it catches</h2>
+  <ul>
+    <li><code>ARGUMENT_MISMATCH</code>: the right tool with the wrong value, e.g. the wrong order ID.</li>
+    <li><code>APPROVAL_REQUIRED</code>: a send or payment the contract says needs approval.</li>
+    <li><code>DENIED_TOOL</code>: a forbidden operation, even when a tool reply tells the agent to do it.</li>
+    <li><code>OUTPUT_ASSERTION</code>: a final answer that contradicts the tool results.</li>
+  </ul>
+
+  <footer>v0.2 preview, MIT licensed, no telemetry, no account. Built by <a href="https://plumbnote.com">Plumbnote</a>.</footer>
+</main>
+</body>
+</html>
