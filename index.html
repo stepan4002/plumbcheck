@@ -42,13 +42,22 @@
 
   <div class="row">
     <a class="btn lime" href="report.html">Open a sample report</a>
-    <a class="btn primary" href="https://github.com/stepan4002/plumbcheck/releases">Download for Windows</a>
+    <a class="btn primary" href="https://github.com/stepan4002/plumbcheck/releases/latest">Download for Windows</a>
     <a class="btn" href="https://github.com/stepan4002/plumbcheck">View on GitHub</a>
   </div>
 
-  <h2>Try it from source</h2>
-  <pre>git clone https://github.com/stepan4002/plumbcheck && cd plumbcheck && npm ci && npm run demo</pre>
-  <p class="lede">Needs Node.js 22+. <code>npm run demo</code> fails on purpose and writes the same kind of report you can open above.</p>
+  <h2>Try it</h2>
+  <pre>npx plumbcheck demo</pre>
+  <p class="lede">Needs Node.js 22+. The demo fails on purpose and writes the same kind of report you can open above. Add it to a project with <code>npm install --save-dev plumbcheck</code>, or install the Windows app, which needs no Node.js.</p>
+
+  <h2>What you get</h2>
+  <ul>
+    <li><strong>Windows app</strong>: build a first test with a form, save projects, run offline fixture checks or let a real model (OpenAI, Anthropic, Ollama and other servers you configure) choose the tools, then keep the run history and compare runs.</li>
+    <li><strong>Command line and CI</strong>: <code>plumbcheck run suite.json</code> writes HTML, JSON and JUnit reports and exits 1 on a regression.</li>
+    <li><strong>Test your own agent</strong>: JavaScript and Python adapters, and an MCP fixture server any MCP client can connect to. Tool calls are replayed from fixtures, so nothing real is touched.</li>
+    <li><strong>Contracts</strong>: allow, deny and approval policies, argument matchers, call order and final-answer checks, with a <a href="schema/contract-v1.schema.json">JSON Schema</a> for editor support.</li>
+    <li>Experimental: an Android app, a self-hosted snapshot relay and an assistant plugin.</li>
+  </ul>
 
   <h2>What it catches</h2>
   <ul>
@@ -58,7 +67,16 @@
     <li><code>OUTPUT_ASSERTION</code>: a final answer that contradicts the tool results.</li>
   </ul>
 
-  <footer>v0.2 preview, MIT licensed, no telemetry, no account. Built by <a href="https://plumbnote.com">Plumbnote</a>.</footer>
+  <h2 id="code-signing-policy">Code signing policy</h2>
+  <p class="lede">Free code signing provided by <a href="https://about.signpath.io">SignPath.io</a>, certificate by <a href="https://signpath.org">SignPath Foundation</a>.</p>
+  <ul>
+    <li>Signed files: the Windows installer and <code>PlumbCheck.exe</code>, built from <a href="https://github.com/stepan4002/plumbcheck">the public repository</a> by its release workflow. Nothing built elsewhere is signed.</li>
+    <li>Roles: author and committer, reviewer, and approver: <a href="https://github.com/stepan4002">stepan4002</a>. Every signing request is approved by hand.</li>
+    <li>Privacy: no telemetry. Read the <a href="https://github.com/stepan4002/plumbcheck/blob/main/docs/PRIVACY.md">privacy policy</a>.</li>
+    <li>Uninstall: Settings &rarr; Apps &rarr; Installed apps &rarr; PlumbCheck, or <code>Uninstall PlumbCheck.exe</code> in the install folder. Your projects in <code>%APPDATA%\PlumbCheck</code> are kept until you delete that folder.</li>
+  </ul>
+
+  <footer>MIT licensed, no telemetry, no account. <a href="https://github.com/stepan4002/plumbcheck/blob/main/docs/STABILITY.md">Stability policy</a> &middot; <a href="https://github.com/stepan4002/plumbcheck/blob/main/CHANGELOG.md">Changelog</a>. Built by <a href="https://plumbnote.com">Plumbnote</a>.</footer>
 </main>
 </body>
 </html>

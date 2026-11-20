@@ -1,0 +1,547 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://stepan4002.github.io/plumbcheck/schema/contract-v1.schema.json",
+  "title": "PlumbCheck contract, version 1",
+  "description": "Structural description of a PlumbCheck v1 tool-call contract. PlumbCheck's own validator is authoritative: it additionally checks assertion indexes against the calls, unique case names, that patterns compile in the linear-time engine, that a range matcher's min does not exceed its max, nesting and size limits (text lengths are counted in UTF-16 code units, so characters outside the Basic Multilingual Plane count twice), and that agent cases assert something. See docs/CONTRACTS.md.",
+  "type": "object",
+  "required": [
+    "version",
+    "name",
+    "policies",
+    "cases"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Editor hint; ignored by PlumbCheck 1.0+. PlumbCheck 0.2 rejects contracts that contain it."
+    },
+    "version": {
+      "const": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "policies": {
+      "$ref": "#/definitions/policies"
+    },
+    "tools": {
+      "$ref": "#/definitions/tools"
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "title": "Planned contract (no agent; the calls are written in the contract)",
+      "properties": {
+        "cases": {
+          "items": {
+            "$ref": "#/definitions/plannedCase"
+          }
+        }
+      }
+    },
+    {
+      "title": "Agent contract (an agent or model produces the calls)",
+      "properties": {
+        "cases": {
+          "items": {
+            "$ref": "#/definitions/agentCase"
+          }
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "nonemptyStrings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "policies": {
+      "type": "object",
+      "properties": {
+        "allow": {
+          "$ref": "#/definitions/nonemptyStrings"
+        },
+        "deny": {
+          "$ref": "#/definitions/nonemptyStrings"
+        },
+        "requireApproval": {
+          "$ref": "#/definitions/nonemptyStrings"
+        }
+      },
+      "additionalProperties": false
+    },
+    "tools": {
+      "type": "object",
+      "maxProperties": 200,
+      "propertyNames": {
+        "minLength": 1,
+        "maxLength": 128
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "inputSchema": {
+            "type": "object",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "const": "object"
+              },
+              "properties": {
+                "type": "object"
+              },
+              "required": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "pattern": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Linear-time subset of regular expressions; backreferences, lookarounds and named groups are rejected."
+    },
+    "plainValue": {
+      "description": "Any JSON value that contains no $plumb matcher.",
+      "if": {
+        "type": "object"
+      },
+      "then": {
+        "not": {
+          "required": [
+            "$plumb"
+          ]
+        },
+        "additionalProperties": {
+          "$ref": "#/definitions/plainValue"
+        }
+      },
+      "else": {
+        "if": {
+          "type": "array"
+        },
+        "then": {
+          "items": {
+            "$ref": "#/definitions/plainValue"
+          }
+        }
+      }
+    },
+    "matcherValue": {
+      "description": "Any JSON value; objects with a $plumb key are argument matchers.",
+      "if": {
+        "type": "object",
+        "required": [
+          "$plumb"
+        ]
+      },
+      "then": {
+        "$ref": "#/definitions/matcher"
+      },
+      "else": {
+        "if": {
+          "type": "object"
+        },
+        "then": {
+          "additionalProperties": {
+            "$ref": "#/definitions/matcherValue"
+          }
+        },
+        "else": {
+          "if": {
+            "type": "array"
+          },
+          "then": {
+            "items": {
+              "$ref": "#/definitions/matcherValue"
+            }
+          }
+        }
+      }
+    },
+    "matcher": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "$plumb"
+          ],
+          "properties": {
+            "$plumb": {
+              "const": "any"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "$plumb",
+            "value"
+          ],
+          "properties": {
+            "$plumb": {
+              "const": "contains"
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4000
+            },
+            "ignoreCase": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "$plumb",
+            "pattern"
+          ],
+          "properties": {
+            "$plumb": {
+              "const": "matches"
+            },
+            "pattern": {
+              "$ref": "#/definitions/pattern"
+            },
+            "ignoreCase": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "$plumb",
+            "values"
+          ],
+          "properties": {
+            "$plumb": {
+              "const": "oneOf"
+            },
+            "values": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 50
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "$plumb"
+          ],
+          "properties": {
+            "$plumb": {
+              "const": "range"
+            },
+            "min": {
+              "type": "number"
+            },
+            "max": {
+              "type": "number"
+            }
+          },
+          "anyOf": [
+            {
+              "required": [
+                "min"
+              ]
+            },
+            {
+              "required": [
+                "max"
+              ]
+            }
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "$plumb",
+            "value"
+          ],
+          "properties": {
+            "$plumb": {
+              "const": "literal"
+            },
+            "value": true
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "call": {
+      "type": "object",
+      "required": [
+        "tool",
+        "arguments"
+      ],
+      "properties": {
+        "tool": {
+          "type": "string",
+          "minLength": 1
+        },
+        "arguments": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/plainValue"
+          },
+          "not": {
+            "required": [
+              "$plumb"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "fixture": {
+      "type": "object",
+      "required": [
+        "tool",
+        "arguments",
+        "result"
+      ],
+      "properties": {
+        "tool": {
+          "type": "string",
+          "minLength": 1
+        },
+        "arguments": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/matcherValue"
+          },
+          "not": {
+            "required": [
+              "$plumb"
+            ]
+          }
+        },
+        "result": true
+      },
+      "additionalProperties": false
+    },
+    "context": {
+      "type": "object",
+      "properties": {
+        "approvedTools": {
+          "$ref": "#/definitions/nonemptyStrings"
+        }
+      },
+      "additionalProperties": false
+    },
+    "resultAssertion": {
+      "type": "object",
+      "required": [
+        "call",
+        "path",
+        "equals"
+      ],
+      "properties": {
+        "call": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "path": {
+          "type": "string"
+        },
+        "equals": true
+      },
+      "additionalProperties": false
+    },
+    "outputCheck": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "equals": true,
+        "contains": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "notContains": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "matches": {
+          "$ref": "#/definitions/pattern"
+        },
+        "ignoreCase": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "equals"
+          ]
+        },
+        {
+          "required": [
+            "contains"
+          ]
+        },
+        {
+          "required": [
+            "notContains"
+          ]
+        },
+        {
+          "required": [
+            "matches"
+          ]
+        }
+      ]
+    },
+    "resultAssertions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/resultAssertion"
+      }
+    },
+    "outputChecks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {
+        "$ref": "#/definitions/outputCheck"
+      }
+    },
+    "plannedCase": {
+      "type": "object",
+      "required": [
+        "name",
+        "calls",
+        "fixtures"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "calls": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/call"
+          }
+        },
+        "fixtures": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/fixture"
+          }
+        },
+        "context": {
+          "$ref": "#/definitions/context"
+        },
+        "expect": {
+          "type": "object",
+          "properties": {
+            "callOrder": {
+              "$ref": "#/definitions/nonemptyStrings"
+            },
+            "never": {
+              "$ref": "#/definitions/nonemptyStrings"
+            },
+            "results": {
+              "$ref": "#/definitions/resultAssertions"
+            },
+            "outputChecks": {
+              "$ref": "#/definitions/outputChecks"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "agentCase": {
+      "type": "object",
+      "required": [
+        "name",
+        "fixtures"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "input": true,
+        "fixtures": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/fixture"
+          }
+        },
+        "context": {
+          "$ref": "#/definitions/context"
+        },
+        "expect": {
+          "type": "object",
+          "properties": {
+            "callOrder": {
+              "$ref": "#/definitions/nonemptyStrings"
+            },
+            "never": {
+              "$ref": "#/definitions/nonemptyStrings"
+            },
+            "results": {
+              "$ref": "#/definitions/resultAssertions"
+            },
+            "output": true,
+            "outputChecks": {
+              "$ref": "#/definitions/outputChecks"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
