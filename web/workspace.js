@@ -15,6 +15,15 @@ export function startWorkspaceUI(scenarios, mountScenarioBuilder) {
   }
   consumeLaunchToken();
   let state, project = null, activeRun = null, polling = false, saving = false, editingConnection = null;
+  let submittingRun = false;
+  const runButton = $('run-project');
+  const runBusy = () => submittingRun || Boolean(activeRun);
+  function updateRunButton() {
+    runButton.disabled = !project;
+    // Keep Run focusable while busy; the click handler enforces aria-disabled.
+    if (runBusy()) runButton.setAttribute('aria-disabled', 'true');
+    else runButton.removeAttribute('aria-disabled');
+  }
   let projectRequest = 0, refreshRequest = 0, builderProjectId = null;
   const draft = () => JSON.stringify({ name: $('project-name').value, task: $('project-task').value, contract: $('editor').value });
   let savedDraft = draft();
@@ -88,7 +97,7 @@ export function startWorkspaceUI(scenarios, mountScenarioBuilder) {
       $('connection-form').closest('details').open = true; notice('Editing a saved connection. A changed provider or destination needs its own credential.');
     });
     document.querySelectorAll('[data-remove-connection]').forEach(b => b.onclick = async () => { if (!confirm('Remove this saved connection and its stored credential? Existing reports will remain.')) return; try { await api(`connections/${b.dataset.removeConnection}`, 'DELETE'); await refresh(); } catch (e) { notice(e.message, true); } });
-    $('run-project').disabled = !project || Boolean(activeRun);
+    updateRunButton();
     $('delete-project').disabled = !project || Boolean(activeRun);
     $('active-project').textContent = project ? `${project.name} / revision ${project.revision}` : 'Choose or create a project';
     $('credential-note').textContent = state.persistentSecrets ? 'Credentials are encrypted by Windows for your user account. They are excluded from project exports.' : 'Credentials stay in this process only. Re-enter them after restarting the application.';
@@ -190,13 +199,15 @@ export function startWorkspaceUI(scenarios, mountScenarioBuilder) {
   $('run-mode').addEventListener('change', () => { runModeTouched = true; });
   // Choosing another connection requires a fresh spending consent.
   $('run-connection').addEventListener('change', () => { $('model-consent').checked = false; preferredConnectionId = $('run-connection').value; });
-  $('run-project').onclick = async () => {
-    if (!project || activeRun) return;
+  runButton.onclick = async () => {
+    if (!project || runBusy()) return;
     const mode = $('run-mode').value;
     if (mode === 'model' && !$('model-consent').checked) { notice('Confirm that this run may send the scenario to your chosen provider and use its API quota.', true); return; }
-    $('run-project').disabled = true;
+    submittingRun = true;
+    updateRunButton();
     try { const r = await api('runs', 'POST', { projectId: project.id, revision: project.revision, mode, connectionId: $('run-connection').value, idempotencyKey: crypto.randomUUID(), timeoutMs: Number($('run-timeout').value) * 1000, maxSteps: Number($('run-steps').value), maxOutputTokens: Number($('run-tokens').value), maxTotalOutputTokens: Number($('run-total-tokens').value), modelConsent: $('model-consent').checked }); activeRun = r.id; notice('Run started. Inspect its progress and evidence in History.'); await refresh(); }
-    catch (e) { notice(e.message, true); $('run-project').disabled = false; }
+    catch (e) { notice(e.message, true); }
+    finally { submittingRun = false; updateRunButton(); }
   };
   $('refresh-workspace').onclick = () => refresh().catch(e => notice(e.message, true));
   $('compare-runs').onclick = async () => { try { const r = await api('compare', 'POST', { left: $('compare-left').value, right: $('compare-right').value }); $('comparison-result').textContent = r.changes.map(c => `${c.name}: ${c.before === null ? 'NEW' : c.before ? 'PASS' : 'FAIL'} → ${c.after === null ? 'REMOVED' : c.after ? 'PASS' : 'FAIL'} ${c.failureCodes.join(', ')}`).join('\n'); } catch (e) { notice(e.message, true); } };

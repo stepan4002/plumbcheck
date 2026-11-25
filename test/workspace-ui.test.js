@@ -309,6 +309,89 @@ test('saving the first test leaves focus on the control a keyboard user reached 
   assert.equal(f.server.workspace.summary().projects.length, 1);
 });
 
+test('running a saved project keeps focus on Run and prevents repeat activation while starting', async t => {
+  let release, starts = 0;
+  const pending = new Promise(resolve => { release = resolve; });
+  const f = await fixture(t, (path, perform) => {
+    if (path !== '/api/runs') return perform();
+    starts++;
+    return pending.then(perform);
+  });
+  const { document } = f.dom.window;
+  const button = f.$('run-project');
+  assert.equal(button.disabled, true, 'Run is unavailable before opening a saved project');
+  f.open(f.q.id);
+  await until(() => f.$('project-name').value === f.q.name);
+  blurFocusedControlWhenDisabled(f.dom.window, button);
+  button.focus();
+  button.click();
+  assert.equal(document.activeElement.id, button.id, 'starting the run must not drop keyboard focus');
+  assert.equal(button.getAttribute('aria-disabled'), 'true');
+
+  const card = f.$('project-list').firstElementChild;
+  f.$('refresh-workspace').click();
+  await until(() => f.$('project-list').firstElementChild !== card);
+  assert.equal(button.getAttribute('aria-disabled'), 'true', 'a refresh must not unlock a pending submission');
+  button.click();
+  assert.equal(starts, 1);
+
+  release();
+  await until(() => f.$('run-history').querySelector('[data-report]'));
+  assert.equal(button.matches(':disabled, [aria-disabled="true"]'), false);
+  assert.equal(document.activeElement.id, button.id);
+});
+
+test('a queued saved-project run stays unavailable and its completion leaves focus where the user moved it', async t => {
+  let queued, starts = 0;
+  const f = await fixture(t, async (path, perform) => {
+    if (path === '/api/runs') starts++;
+    const response = await perform();
+    if (path === '/api/runs') queued = await response.clone().json();
+    if (path === '/api/workspace' && queued) {
+      // Show the real queued response once even if the fixture has already finished.
+      const run = queued;
+      queued = null;
+      return Response.json({ ...await response.json(), runs: [run] });
+    }
+    return response;
+  });
+  f.open(f.q.id);
+  await until(() => f.$('project-name').value === f.q.name);
+  const button = f.$('run-project'), next = f.$('run-total-tokens');
+  blurFocusedControlWhenDisabled(f.dom.window, button);
+  button.focus();
+  button.click();
+  await until(() => f.$('run-history').querySelector('[data-cancel]'));
+  assert.equal(f.dom.window.document.activeElement.id, button.id);
+  assert.equal(button.getAttribute('aria-disabled'), 'true');
+  button.click();
+  assert.equal(starts, 1);
+  next.focus();
+  await until(() => f.$('run-history').querySelector('[data-report]'));
+  assert.equal(button.matches(':disabled, [aria-disabled="true"]'), false);
+  assert.equal(f.dom.window.document.activeElement.id, next.id);
+});
+
+test('a rejected saved-project run becomes available for retry without moving focus', async t => {
+  const f = await fixture(t);
+  f.open(f.q.id);
+  await until(() => f.$('project-name').value === f.q.name);
+  const button = f.$('run-project'), timeout = f.$('run-timeout');
+  blurFocusedControlWhenDisabled(f.dom.window, button);
+  button.focus();
+  timeout.value = '0';
+  button.click();
+  const message = f.$('workspace-message');
+  await until(() => /timeoutMs must be/.test(message.textContent));
+  assert.ok(message.classList.contains('bad'), 'a rejected run still presents an error');
+  assert.equal(f.dom.window.document.activeElement.id, button.id);
+  assert.equal(button.matches(':disabled, [aria-disabled="true"]'), false);
+  timeout.value = '60';
+  button.click();
+  await until(() => f.$('run-history').querySelector('[data-report]'));
+  assert.equal(f.server.workspace.summary().runs.length, 1);
+});
+
 test('inspecting a saved run moves focus to the execution evidence heading', async t => {
   const f = await fixture(t);
   f.open(f.q.id);
